@@ -1,48 +1,23 @@
-// ==============================
-// CONFIG
-// ==============================
-const MAX_SAMPLES = 5;        // how many face embeddings to save
-const CAPTURE_INTERVAL = 800; // ms between captures
-const MAX_DURATION = 6000;    // total scan time (ms)
+const MAX_SAMPLES = 4;
+const CAPTURE_INTERVAL = 1500;
+const MAX_DURATION = 9000;
 
-// ==============================
-// STATE
-// ==============================
-let samplesCaptured = 0;
+let embeddings = [];
 let captureInterval = null;
 let stopTimer = null;
 
-// ==============================
-// AUTO FACE REGISTRATION
-// ==============================
 async function autoRegister() {
-  const user = sessionStorage.getItem("username");
-
-  if (!user) {
-    document.getElementById("status").innerText = "Username missing";
-    return;
-  }
-
-  // reset state
-  samplesCaptured = 0;
-  clearInterval(captureInterval);
-  clearTimeout(stopTimer);
+  embeddings = [];
 
   document.getElementById("status").innerText =
-    "Scanning… slowly turn your head left / right";
+    "Scanning… slowly turn your head";
 
-  // start capture loop
   captureInterval = setInterval(captureOnce, CAPTURE_INTERVAL);
-
-  // hard stop after fixed duration
   stopTimer = setTimeout(stopCapture, MAX_DURATION);
 }
 
-// ==============================
-// SINGLE CAPTURE ATTEMPT
-// ==============================
 async function captureOnce() {
-  if (samplesCaptured >= MAX_SAMPLES) {
+  if (embeddings.length >= MAX_SAMPLES) {
     stopCapture();
     return;
   }
@@ -50,73 +25,68 @@ async function captureOnce() {
   const blob = await captureFrame();
   if (!blob) return;
 
-  const user = sessionStorage.getItem("username");
-
   const form = new FormData();
   form.append("file", blob);
-  form.append("user", user);
 
-  try {
-    const res = await fetch("/api/enroll", {
-      method: "POST",
-      body: form
-    });
+  const res = await fetch("/api/enroll", {
+    method: "POST",
+    body: form
+  });
 
-    const data = await res.json();
+  const data = await res.json();
 
-    if (data.status === "success") {
-      samplesCaptured++;
-      flashRing();
+  if (data.status === "ok") {
+    embeddings.push(data.embedding);
+    flashRing();
 
-      document.getElementById("status").innerText =
-        `Captured ${samplesCaptured} / ${MAX_SAMPLES}`;
-    }
-  } catch (err) {
-    console.error("Enroll error:", err);
+    document.getElementById("status").innerText =
+      `Captured ${embeddings.length}/${MAX_SAMPLES}`;
   }
 }
 
-// ==============================
-// STOP CAPTURE CLEANLY
-// ==============================
 function stopCapture() {
   clearInterval(captureInterval);
   clearTimeout(stopTimer);
 
-  if (samplesCaptured > 0) {
-    finishRegistration();
+  if (embeddings.length === MAX_SAMPLES) {
+    finalizeRegistration();
   } else {
     document.getElementById("status").innerText =
-      "No face detected. Please try again.";
+      "Face not captured properly. Try again.";
   }
 }
 
-// ==============================
-// VISUAL FEEDBACK
-// ==============================
+async function finalizeRegistration() {
+  const user = sessionStorage.getItem("username");
+
+  const res = await fetch("/api/enroll/finalize", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      user: user,
+      embeddings: embeddings
+    })
+  });
+
+  const data = await res.json();
+
+  if (data.status === "exists") {
+    document.getElementById("successText").innerText =
+      `Face already registered as ${data.user}`;
+  } else {
+    document.getElementById("successText").innerText =
+      "Face registered successfully";
+  }
+
+  document.getElementById("successPopup").classList.remove("hidden");
+}
+
 function flashRing() {
   const ring = document.getElementById("scanRing");
   ring.classList.add("green");
   setTimeout(() => ring.classList.remove("green"), 300);
 }
 
-// ==============================
-// FINISH REGISTRATION
-// ==============================
-function finishRegistration() {
-  document.getElementById("status").innerText =
-    "Face registration complete";
-
-  setTimeout(() => {
-    document.getElementById("successText").innerText =
-      "Face registered successfully";
-    document.getElementById("successPopup").classList.remove("hidden");
-  }, 600);
-}
-
-// ==============================
-// NAVIGATION
-// ==============================
 function goHome() {
   window.location.href = "/";
 }
