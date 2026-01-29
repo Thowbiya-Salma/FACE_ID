@@ -1,0 +1,10 @@
+
+fastapi
+uvicorn
+jinja2
+numpy
+opencv-python
+face-recognition
+python-multipart
+cmake
+dlib

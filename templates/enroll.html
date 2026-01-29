@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Enroll Face</title>
+
+  <link rel="stylesheet" href="/static/css/faceid.css" />
+</head>
+<body class="scan-page">
+
+  <div class="enroll-card">
+    <h2>Enroll Face</h2>
+    <p class="subtitle">Position your face inside the ring</p>
+
+    <!-- CAMERA BOX -->
+    <div class="camera-box">
+      <video id="video" autoplay muted playsinline></video>
+      <div class="scan-ring" id="scanRing"></div>
+    </div>
+
+    <button class="primary-btn" onclick="registerFace()">Enroll Face</button>
+    <button class="secondary-btn" onclick="goHome()">Back</button>
+
+    <p id="status">Ready to scan</p>
+  </div>
+
+  <!-- SUCCESS POPUP -->
+<div id="successPopup" class="success-popup hidden">
+  <div class="success-card">
+    <div class="success-circle">✓</div>
+    <h3>All Set!</h3>
+    <p id="successText"></p>
+    <button class="primary-btn" onclick="goHome()">Back to Home</button>
+  </div>
+</div>
+
+
+  <script src="/static/js/camera.js"></script>
+  <script src="/static/js/register.js"></script>
+</body>
+</html>

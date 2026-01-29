@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Verify Face</title>
+  <link rel="stylesheet" href="/static/css/faceid.css">
+</head>
+
+<body class="scan-page">
+
+  <div class="verify-card">
+    <h1>Verification</h1>
+    <p class="subtitle">Authenticating your identity</p>
+
+    <!-- CAMERA CONFINED INSIDE CARD -->
+    <div class="camera-box">
+      <video id="video" autoplay muted playsinline></video>
+      <div class="scanner-line"></div>
+    </div>
+
+    
+  </div>
+
+  <!-- FAILURE POPUP -->
+  <div id="failPopup" class="success-popup hidden">
+    <div class="success-card">
+      <div class="success-circle" style="background:#ef4444;">✕</div>
+      <h3>Unrecognized User</h3>
+      <p>Face ID does not match any profile.</p>
+
+      <button class="primary-btn" onclick="retry()">Try Again</button>
+      <button class="secondary-btn" onclick="window.location.href='/'">
+        Register New Face
+      </button>
+    </div>
+  </div>
+
+  <!-- SUCCESS POPUP -->
+  <div id="successPopup" class="success-popup hidden">
+    <div class="success-card">
+      <div class="success-circle">✓</div>
+      <h3 id="welcomeText"></h3>
+      <p>Identity verified successfully</p>
+
+      <button class="primary-btn" onclick="window.location.href='/'">
+        Continue to App
+      </button>
+    </div>
+  </div>
+
+  <script src="/static/js/camera.js"></script>
+  <script src="/static/js/verify.js"></script>
+</body>
+</html>

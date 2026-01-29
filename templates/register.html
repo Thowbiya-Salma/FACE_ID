@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Enroll Face</title>
+  <link rel="stylesheet" href="/static/css/faceid.css">
+</head>
+
+<body class="scan-page">
+
+  <div class="enroll-card">
+    <h1>Enroll Face</h1>
+    <p class="subtitle">Position your face inside the frame</p>
+
+    <!-- SCANNER -->
+    <div class="scanner-wrapper">
+      <div class="scan-ring blue" id="ring"></div>
+      <video id="video" autoplay muted></video>
+    </div>
+
+    <button class="primary-btn" onclick="registerFace()">Enroll Face</button>
+    <button class="secondary-btn" onclick="goHome()">Back</button>
+
+    <p id="status">Ready to scan</p>
+  </div>
+
+  <!-- SUCCESS POPUP -->
+  <div id="successPopup" class="success-popup hidden">
+    <div class="success-circle">✓</div>
+    <h2>All Set!</h2>
+    <p id="successUser"></p>
+    <button onclick="goHome()">Back to Home</button>
+  </div>
+
+  <script src="/static/js/camera.js"></script>
+  <script src="/static/js/register.js"></script>
+</body>
+</html>

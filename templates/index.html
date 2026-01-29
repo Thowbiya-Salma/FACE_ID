@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Face Unlock System</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="center">
+
+  <div class="card">
+    <h1>Face Unlock System</h1>
+    <p class="subtitle">Secure biometric authentication</p>
+
+    <input
+      type="text"
+      id="username"
+      placeholder="Enter your name"
+      autocomplete="off"
+    />
+
+    <button class="primary-btn" onclick="goToEnroll()">
+      Register Face
+    </button>
+
+    <button class="secondary-btn" onclick="goToVerify()">
+      Verify Face
+    </button>
+  </div>
+
+  <script>
+    function goToEnroll() {
+      const name = document.getElementById("username").value.trim();
+      if (!name) {
+        alert("Please enter your name");
+        return;
+      }
+      sessionStorage.setItem("username", name);
+      window.location.href = "/enroll";
+    }
+
+    function goToVerify() {
+      window.location.href = "/verify";
+    }
+  </script>
+
+</body>
+</html>
