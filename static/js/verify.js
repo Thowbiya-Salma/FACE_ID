@@ -1,9 +1,10 @@
 let scanning = true;
 let scanInterval = null;
 let failTimer = null;
+let finished = false;
 
 async function verifyFace() {
-  if (!scanning) return;
+  if (!scanning || finished) return;
 
   const blob = await captureFrame();
   const form = new FormData();
@@ -22,6 +23,9 @@ async function verifyFace() {
 }
 
 function onSuccess(user) {
+  if (finished) return;
+  finished = true;
+
   scanning = false;
   clearInterval(scanInterval);
   clearTimeout(failTimer);
@@ -32,8 +36,12 @@ function onSuccess(user) {
 }
 
 function onFailure() {
+  if (finished) return;
+  finished = true;
+
   scanning = false;
   clearInterval(scanInterval);
+
   document.querySelector(".scanner-line").style.display = "none";
   document.getElementById("failPopup").classList.remove("hidden");
 }
@@ -43,7 +51,6 @@ function retry() {
 }
 
 video.addEventListener("playing", () => {
-  scanInterval = setInterval(verifyFace, 300); // 🔥 faster
-
-  failTimer = setTimeout(onFailure, 2500); // 🔥 instant fail
+  scanInterval = setInterval(verifyFace, 300);
+  failTimer = setTimeout(onFailure, 2500);
 });
