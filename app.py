@@ -25,6 +25,8 @@ def verify_page(request: Request):
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 KNOWN_FACES_DIR = os.path.join(BASE_DIR, "known_faces")
 
+import uuid
+
 @app.post("/api/enroll")
 async def enroll(
     file: UploadFile = File(...),
@@ -35,12 +37,16 @@ async def enroll(
     if emb is None:
         return {"status": "fail"}
 
-    os.makedirs(KNOWN_FACES_DIR, exist_ok=True)
+    user_dir = os.path.join("known_faces", user)
+    os.makedirs(user_dir, exist_ok=True)
 
-    file_path = os.path.join(KNOWN_FACES_DIR, f"{user}.npy")
-    np.save(file_path, emb)
+    filename = f"{uuid.uuid4().hex}.npy"
+    path = os.path.join(user_dir, filename)
+
+    np.save(path, emb)
 
     return {"status": "success"}
+
 
 
 
