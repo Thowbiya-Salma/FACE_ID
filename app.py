@@ -29,49 +29,50 @@ import uuid
 
 @app.post("/api/enroll")
 async def enroll_temp(file: UploadFile = File(...)):
-    emb = encode_face(await file.read())
+    result = encode_face(await file.read())
 
-    if emb is None:
+    if result is None:
         return {"status": "skip"}
 
     return {
         "status": "ok",
-        "embedding": emb.tolist()
+        "embedding": result["embedding"].tolist(),
+        "pose": result["pose"]
     }
-
-
-
 
 
 @app.post("/api/verify")
 async def verify(file: UploadFile = File(...)):
-    emb = encode_face(await file.read())
-    result = verify_face(emb)
-    return result
+    result = encode_face(await file.read())
+
+    if result is None:
+        return {"match": False}
+
+    # ✅ ONLY pass the embedding
+    return verify_face(result["embedding"])
+
+
 
 @app.post("/api/enroll/finalize")
 async def enroll_finalize(data: dict):
     user = data["user"]
-    embeddings = data["embeddings"]
+    embeddings = [np.array(e) for e in data["embeddings"]]
 
-    # convert back to numpy
-    embeddings = [np.array(e) for e in embeddings]
-
-    # 🔍 check duplicates AFTER capture
+    # check duplicate AFTER capture
     for emb in embeddings:
         result = verify_face(emb)
-        if result.get("match") is True and result.get("user") != user:
-            return {
-                "status": "exists",
-                "user": result.get("user")
-            }
+        if result.get("match"):
+            if result.get("user") != user:
+                return {
+                    "status": "exists",
+                    "user": result.get("user")
+                }
 
-    # 💾 save all embeddings
     user_dir = os.path.join("known_faces", user)
     os.makedirs(user_dir, exist_ok=True)
 
     for emb in embeddings:
-        filename = f"{uuid.uuid4().hex}.npy"
-        np.save(os.path.join(user_dir, filename), emb)
+        np.save(os.path.join(user_dir, f"{uuid.uuid4().hex}.npy"), emb)
 
     return {"status": "success"}
+

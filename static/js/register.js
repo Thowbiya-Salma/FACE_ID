@@ -1,26 +1,22 @@
-const MAX_SAMPLES = 4;
-const CAPTURE_INTERVAL = 1500;
-const MAX_DURATION = 9000;
+const REQUIRED_POSES = ["center", "left", "right", "up"];
+const CAPTURE_INTERVAL = 1200;
 
 let embeddings = [];
+let poseIndex = 0;
 let captureInterval = null;
-let stopTimer = null;
 
 async function autoRegister() {
   embeddings = [];
+  poseIndex = 0;
 
   document.getElementById("status").innerText =
-    "Scanning… slowly turn your head";
+    `Look ${REQUIRED_POSES[poseIndex]}`;
 
   captureInterval = setInterval(captureOnce, CAPTURE_INTERVAL);
-  stopTimer = setTimeout(stopCapture, MAX_DURATION);
 }
 
 async function captureOnce() {
-  if (embeddings.length >= MAX_SAMPLES) {
-    stopCapture();
-    return;
-  }
+  if (poseIndex >= REQUIRED_POSES.length) return;
 
   const blob = await captureFrame();
   if (!blob) return;
@@ -35,24 +31,27 @@ async function captureOnce() {
 
   const data = await res.json();
 
-  if (data.status === "ok") {
-    embeddings.push(data.embedding);
-    flashRing();
+  if (data.status !== "ok") return;
 
+  const expectedPose = REQUIRED_POSES[poseIndex];
+
+  if (data.pose !== expectedPose) {
     document.getElementById("status").innerText =
-      `Captured ${embeddings.length}/${MAX_SAMPLES}`;
+      `Please look ${expectedPose}`;
+    return;
   }
-}
 
-function stopCapture() {
-  clearInterval(captureInterval);
-  clearTimeout(stopTimer);
+  embeddings.push(data.embedding);
+  poseIndex++;
 
-  if (embeddings.length === MAX_SAMPLES) {
+  flashRing();
+
+  if (poseIndex === REQUIRED_POSES.length) {
+    clearInterval(captureInterval);
     finalizeRegistration();
   } else {
     document.getElementById("status").innerText =
-      "Face not captured properly. Try again.";
+      `Look ${REQUIRED_POSES[poseIndex]}`;
   }
 }
 

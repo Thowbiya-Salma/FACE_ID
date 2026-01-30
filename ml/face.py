@@ -30,21 +30,26 @@ def encode_face(image_bytes):
     if not encodings:
         return None
 
-    return encodings[0]
+    landmarks = face_recognition.face_landmarks(rgb, locations)
+    pose = estimate_pose(landmarks[0])
+
+    return {
+        "embedding": encodings[0],
+        "pose": pose
+    }
 
 
-def verify_face(embedding):
-    if embedding is None:
+def verify_face(embedding: np.ndarray):
+    # ❌ Reject invalid input early
+    if embedding is None or not isinstance(embedding, np.ndarray):
         return {"match": False}
 
     base_dir = "known_faces"
-
     if not os.path.exists(base_dir):
         return {"match": False}
 
     for user in os.listdir(base_dir):
         user_dir = os.path.join(base_dir, user)
-
         if not os.path.isdir(user_dir):
             continue
 
@@ -53,6 +58,10 @@ def verify_face(embedding):
                 continue
 
             known = np.load(os.path.join(user_dir, file))
+
+            if not isinstance(known, np.ndarray):
+                continue
+
             dist = np.linalg.norm(known - embedding)
 
             if dist < 0.6:
@@ -64,5 +73,26 @@ def verify_face(embedding):
 
     return {"match": False}
 
+
+
+
+def estimate_pose(landmarks):
+    nose = landmarks["nose_bridge"][0]
+    left_eye = landmarks["left_eye"][0]
+    right_eye = landmarks["right_eye"][3]
+
+    eye_center_x = (left_eye[0] + right_eye[0]) / 2
+
+    dx = nose[0] - eye_center_x
+    dy = nose[1] - ((left_eye[1] + right_eye[1]) / 2)
+
+    if dx > 15:
+        return "right"
+    elif dx < -15:
+        return "left"
+    elif dy < -10:
+        return "up"
+    else:
+        return "center"
 
 
