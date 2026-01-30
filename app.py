@@ -55,7 +55,7 @@ async def enroll_finalize(data: dict):
 
     # 🔍 STRICT duplicate check
     for emb in embeddings:
-        result = verify_face(emb, threshold=0.45)  # STRICT threshold
+        result = verify_face(emb, threshold=0.40)  # STRICT threshold
         if result.get("match"):
             matches.append(result["user"])
 
@@ -63,7 +63,7 @@ async def enroll_finalize(data: dict):
     if matches:
         most_common_user, count = Counter(matches).most_common(1)[0]
 
-        if count >= 2 and most_common_user != user:
+        if count >= 4 and most_common_user != user:
             return {
                 "status": "exists",
                 "user": most_common_user
