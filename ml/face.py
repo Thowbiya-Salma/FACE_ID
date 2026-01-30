@@ -25,15 +25,9 @@ def encode_face(image_bytes):
     if not encodings:
         return None
 
-    landmarks = face_recognition.face_landmarks(rgb, locations)
-    pose = estimate_pose(landmarks[0])
+    return encodings[0].tolist()
 
-    return {
-        "embedding": encodings[0].tolist(),
-        "pose": pose
-    }
-
-def verify_face(embedding):
+def verify_face(embedding, threshold=0.6):
     if embedding is None:
         return {"match": False}
 
@@ -55,8 +49,7 @@ def verify_face(embedding):
             known = np.load(os.path.join(user_dir, file))
 
             dist = np.linalg.norm(known - embedding)
-
-            if dist < 0.6:
+            if dist < threshold:
                 return {
                     "match": True,
                     "user": user,
@@ -64,23 +57,3 @@ def verify_face(embedding):
                 }
 
     return {"match": False}
-
-def estimate_pose(landmarks):
-    nose = landmarks["nose_bridge"][0]
-    left_eye = landmarks["left_eye"][0]
-    right_eye = landmarks["right_eye"][3]
-
-    eye_center_x = (left_eye[0] + right_eye[0]) / 2
-    eye_center_y = (left_eye[1] + right_eye[1]) / 2
-
-    dx = nose[0] - eye_center_x
-    dy = nose[1] - eye_center_y
-
-    if dx > 15:
-        return "right"
-    elif dx < -15:
-        return "left"
-    elif dy < -10:
-        return "up"
-    else:
-        return "center"

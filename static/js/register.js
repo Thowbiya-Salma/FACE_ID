@@ -1,65 +1,83 @@
-const REQUIRED_POSES = ["center", "left", "right", "up"];
-const CAPTURE_INTERVAL = 1200;
+// ==============================
+// CONFIG
+// ==============================
+const MAX_SAMPLES = 4;
+const CAPTURE_INTERVAL = 1500;
 
+// ==============================
+// STATE
+// ==============================
 let embeddings = [];
-let poseIndex = 0;
 let captureInterval = null;
+let isCapturing = false;
+let isFinished = false;
 
+// ==============================
+// AUTO REGISTER
+// ==============================
 async function autoRegister() {
   embeddings = [];
-  poseIndex = 0;
+  isCapturing = false;
+  isFinished = false;
 
   const user = sessionStorage.getItem("username");
   if (!user) {
-    alert("Username missing. Please go back and enter your name.");
+    document.getElementById("status").innerText = "Username missing";
     return;
   }
 
   document.getElementById("status").innerText =
-    `Look ${REQUIRED_POSES[poseIndex]}`;
+    "Scanning… slowly turn your head";
 
   captureInterval = setInterval(captureOnce, CAPTURE_INTERVAL);
 }
 
+// ==============================
+// CAPTURE ONE FRAME
+// ==============================
 async function captureOnce() {
-  if (poseIndex >= REQUIRED_POSES.length) return;
+  if (isCapturing || isFinished) return;
+  if (embeddings.length >= MAX_SAMPLES) return;
 
-  const blob = await captureFrame();
-  if (!blob) return;
+  isCapturing = true;
 
-  const form = new FormData();
-  form.append("file", blob);
+  try {
+    const blob = await captureFrame();
+    if (!blob) return;
 
-  const res = await fetch("/api/enroll", {
-    method: "POST",
-    body: form
-  });
+    const form = new FormData();
+    form.append("file", blob);
 
-  const data = await res.json();
+    const res = await fetch("/api/enroll", {
+      method: "POST",
+      body: form
+    });
 
-  if (data.status !== "ok") return;
+    const data = await res.json();
+    if (data.status !== "ok") return;
 
-  const expectedPose = REQUIRED_POSES[poseIndex];
-  if (data.pose !== expectedPose) {
+    embeddings.push(data.embedding);
+    flashRing();
+
     document.getElementById("status").innerText =
-      `Please look ${expectedPose}`;
-    return;
-  }
+      `Captured ${embeddings.length} / ${MAX_SAMPLES}`;
 
-  embeddings.push(data.embedding);
-  poseIndex++;
+    if (embeddings.length === MAX_SAMPLES) {
+      isFinished = true;
+      clearInterval(captureInterval);
+      finalizeRegistration();
+    }
 
-  flashRing();
-
-  if (poseIndex === REQUIRED_POSES.length) {
-    clearInterval(captureInterval);
-    finalizeRegistration();
-  } else {
-    document.getElementById("status").innerText =
-      `Look ${REQUIRED_POSES[poseIndex]}`;
+  } catch (err) {
+    console.error("Capture error:", err);
+  } finally {
+    isCapturing = false;
   }
 }
 
+// ==============================
+// FINALIZE
+// ==============================
 async function finalizeRegistration() {
   const user = sessionStorage.getItem("username");
 
@@ -74,17 +92,17 @@ async function finalizeRegistration() {
 
   const data = await res.json();
 
-  if (data.status === "exists") {
-    document.getElementById("successText").innerText =
-      `Face already registered as ${data.user}`;
-  } else {
-    document.getElementById("successText").innerText =
-      "Face registered successfully";
-  }
+  document.getElementById("successText").innerText =
+    data.status === "exists"
+      ? `Face already registered as ${data.user}`
+      : "Face registered successfully";
 
   document.getElementById("successPopup").classList.remove("hidden");
 }
 
+// ==============================
+// UI HELPERS
+// ==============================
 function flashRing() {
   const ring = document.getElementById("scanRing");
   ring.classList.add("green");
@@ -95,7 +113,7 @@ function goHome() {
   window.location.href = "/";
 }
 
-/* 🔥 AUTO START WHEN CAMERA IS READY */
-video.addEventListener("playing", () => {
-  autoRegister();
-});
+// ==============================
+// AUTO START
+// ==============================
+video.addEventListener("playing", autoRegister);

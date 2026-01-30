@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request, UploadFile, File
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from collections import Counter
 import numpy as np
 import os
 import uuid
@@ -27,40 +28,48 @@ def verify_page(request: Request):
 
 @app.post("/api/enroll")
 async def enroll_temp(file: UploadFile = File(...)):
-    result = encode_face(await file.read())
-    if result is None:
+    embedding = encode_face(await file.read())
+    if embedding is None:
         return {"status": "skip"}
 
     return {
         "status": "ok",
-        "embedding": result["embedding"],
-        "pose": result["pose"]
+        "embedding": embedding
     }
 
 @app.post("/api/verify")
 async def verify(file: UploadFile = File(...)):
-    result = encode_face(await file.read())
-    if result is None:
+    embedding = encode_face(await file.read())
+    if embedding is None:
         return {"match": False}
 
-    return verify_face(result["embedding"])
+    return verify_face(embedding)
+
 
 @app.post("/api/enroll/finalize")
 async def enroll_finalize(data: dict):
-    user = data.get("user")
-    embeddings = [np.array(e, dtype=float) for e in data.get("embeddings", [])]
+    user = data["user"]
+    embeddings = [np.array(e) for e in data["embeddings"]]
 
-    if not user or len(embeddings) != 4:
-        return {"status": "error"}
+    matches = []
 
+    # 🔍 STRICT duplicate check
     for emb in embeddings:
-        result = verify_face(emb)
+        result = verify_face(emb, threshold=0.45)  # STRICT threshold
         if result.get("match"):
+            matches.append(result["user"])
+
+    # ✅ Require at least 2 matches to reject
+    if matches:
+        most_common_user, count = Counter(matches).most_common(1)[0]
+
+        if count >= 2 and most_common_user != user:
             return {
                 "status": "exists",
-                "user": result.get("user")
+                "user": most_common_user
             }
 
+    # 💾 Save embeddings
     user_dir = os.path.join("known_faces", user)
     os.makedirs(user_dir, exist_ok=True)
 
