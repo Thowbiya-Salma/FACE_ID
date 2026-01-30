@@ -1,32 +1,27 @@
-
-import face_recognition, numpy as np, cv2, os
+import face_recognition
+import numpy as np
+import cv2
+import os
 
 def encode_face(image_bytes):
-    # Convert bytes to image
     nparr = np.frombuffer(image_bytes, np.uint8)
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
     if img is None:
         return None
 
-    # 🔥 IMPORTANT: BGR → RGB
     rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
-    # 🔥 Resize for stability (webcam fix)
     h, w, _ = rgb.shape
     if w > 800:
         scale = 800 / w
         rgb = cv2.resize(rgb, (int(w * scale), int(h * scale)))
 
-    # 🔥 First detect face locations
     locations = face_recognition.face_locations(rgb, model="hog")
-
     if not locations:
         return None
 
-    # 🔥 Then encode using detected locations
     encodings = face_recognition.face_encodings(rgb, locations)
-
     if not encodings:
         return None
 
@@ -34,15 +29,15 @@ def encode_face(image_bytes):
     pose = estimate_pose(landmarks[0])
 
     return {
-        "embedding": encodings[0],
+        "embedding": encodings[0].tolist(),
         "pose": pose
     }
 
-
-def verify_face(embedding: np.ndarray):
-    # ❌ Reject invalid input early
-    if embedding is None or not isinstance(embedding, np.ndarray):
+def verify_face(embedding):
+    if embedding is None:
         return {"match": False}
+
+    embedding = np.array(embedding, dtype=float)
 
     base_dir = "known_faces"
     if not os.path.exists(base_dir):
@@ -59,9 +54,6 @@ def verify_face(embedding: np.ndarray):
 
             known = np.load(os.path.join(user_dir, file))
 
-            if not isinstance(known, np.ndarray):
-                continue
-
             dist = np.linalg.norm(known - embedding)
 
             if dist < 0.6:
@@ -73,18 +65,16 @@ def verify_face(embedding: np.ndarray):
 
     return {"match": False}
 
-
-
-
 def estimate_pose(landmarks):
     nose = landmarks["nose_bridge"][0]
     left_eye = landmarks["left_eye"][0]
     right_eye = landmarks["right_eye"][3]
 
     eye_center_x = (left_eye[0] + right_eye[0]) / 2
+    eye_center_y = (left_eye[1] + right_eye[1]) / 2
 
     dx = nose[0] - eye_center_x
-    dy = nose[1] - ((left_eye[1] + right_eye[1]) / 2)
+    dy = nose[1] - eye_center_y
 
     if dx > 15:
         return "right"
@@ -94,5 +84,3 @@ def estimate_pose(landmarks):
         return "up"
     else:
         return "center"
-
-

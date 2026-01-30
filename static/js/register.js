@@ -9,6 +9,12 @@ async function autoRegister() {
   embeddings = [];
   poseIndex = 0;
 
+  const user = sessionStorage.getItem("username");
+  if (!user) {
+    alert("Username missing. Please go back and enter your name.");
+    return;
+  }
+
   document.getElementById("status").innerText =
     `Look ${REQUIRED_POSES[poseIndex]}`;
 
@@ -34,7 +40,6 @@ async function captureOnce() {
   if (data.status !== "ok") return;
 
   const expectedPose = REQUIRED_POSES[poseIndex];
-
   if (data.pose !== expectedPose) {
     document.getElementById("status").innerText =
       `Please look ${expectedPose}`;
@@ -89,3 +94,8 @@ function flashRing() {
 function goHome() {
   window.location.href = "/";
 }
+
+/* 🔥 AUTO START WHEN CAMERA IS READY */
+video.addEventListener("playing", () => {
+  autoRegister();
+});
